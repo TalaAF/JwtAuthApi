@@ -18,7 +18,6 @@ public class JwtTokenGenerator
         {
             throw new InvalidOperationException("JWT key is not configured.");
         }
-        Encoding.UTF8.GetBytes(key);
         var securityKey = new SymmetricSecurityKey(
             Encoding.UTF8.GetBytes(key)
         );
@@ -32,7 +31,6 @@ public class JwtTokenGenerator
 };
         var issuer = _configuration["Jwt:Issuer"];
         var audience = _configuration["Jwt:Audience"];
-        DateTime.UtcNow.AddMinutes(30);
         var token = new JwtSecurityToken(
             issuer: issuer,
             audience: audience,
@@ -41,5 +39,35 @@ public class JwtTokenGenerator
             signingCredentials: credentials
         );
         return new JwtSecurityTokenHandler().WriteToken(token);
+    }
+
+    public bool ValidateToken(string token)
+    {
+        var key = _configuration["Jwt:Key"];
+        if (string.IsNullOrEmpty(key))
+        {
+            throw new InvalidOperationException("JWT key is not configured.");
+        }
+        var securityKey = new SymmetricSecurityKey(
+            Encoding.UTF8.GetBytes(key)
+        );
+        var tokenHandler = new JwtSecurityTokenHandler();
+        try
+        {
+            tokenHandler.ValidateToken(token, new TokenValidationParameters
+            {
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = securityKey,
+                ValidateIssuer = false,
+                ValidateAudience = false,
+                ValidateLifetime = true,
+                ClockSkew = TimeSpan.Zero
+            }, out SecurityToken validatedToken);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
     }
 }
